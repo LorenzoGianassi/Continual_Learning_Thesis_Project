@@ -1,2 +1,2 @@
 # Continual_Learning_Thesis
-Repository con thesi dell'elaborato, Powerpoint e colab del Progetto
+Repository con tesi dell'elaborato in LaTex, Powerpoint e colab del Progetto
