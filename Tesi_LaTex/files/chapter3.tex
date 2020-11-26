@@ -1,0 +1,225 @@
+\chapter{Esperimenti}\label{ch:chapter3}
+\section{Introduzione al Progetto}
+Prima di poter iniziare a mostrare il progetto è necessario porre delle basi e limiti per quest'ultimo.
+Per analizzare il concetto del \textbf{Continual Learning} ci concentreremo sul problema di \textit{classificazione}, tipico del \textit{Deep Learning}. La classificazione implica la previsione a quale classe appartenga un elemento. Alcuni classificatori sono binari, altri sono multi-classe, in grado di discernere un esempio in una delle diverse classi. Noi, quindi, ci andremo a concentrare sull'utilizzo di un classificatore \textit{multi-classe}.
+\newline
+La seconda limitazione riguarda l'approccio \textbf{\textit{Task Incremental}}.
+\newline Il \textbf{\textit{Task Incremental}} corrisponde ad un approccio in cui i dati arrivano in sequenza di \textit{batches} e ognuno dei quali corrisponde ad un \textit{task}. Ad ogni \textit{task} corrisponderà un nuovo insieme di \textit{labels} il cui numero dipenderà dalla quantità di quest'ultime nel \textit{dataset} e dalla loro divisione scelta. In altre parole, assumiamo  che per un dato \textit{task}, tutti i dati diventino disponibili simultaneamente seguendo il concetto di \textit{Training Offline}. Ciò consente un \textit{training} per più epoche su tutti i suoi dati di addestramento, mescolati ripetutamente per garantire delle condizioni di 
+\textit{i.i.d.}. È importante sottolineare che i dati appartenenti al  precedente o al futuro \textit{task}
+non saranno utilizzabili. Ottimizzare/Allenare per un nuovo \textit{task} in questa configurazione si tradurrà nel \textit{\textbf{Catastrophic Forgetting}}, con significativi
+cali sulle prestazioni relative ai vecchi \textit{tasks}, salvo siano adottate strategie specifiche.
+\newline 
+A differenza della limitazione alla configurazione \textit{Multi-Head} utilizzata nel paper\cite{Continual_Learning},
+in questo elaborato proveremo ad analizzare entrambe le configurazioni \textit{Multi-Head/Single-Head}. Ciò corrisponde ai due approcci che abbiamo già introdotto nel primo capitolo: \textbf{Task-Agnostic/Task-Aware}. Nel caso di \textbf{Task-Agnostic} avremo una  \textit{Single-Head} per tutti i \textit{tasks} perchè non è noto su quale stiamo facendo \textit{training/testing}, mentre per \textbf{Task-Aware} avremo una \textit{Multi-Head} e selezioneremo l'\textit{Output} corrispondente a quello corrente.
+\section{Pipeline}
+Per simulare il processo di \textbf{Continual Learning} è stato necessario stabilire una \textit{Pipeline} che avrebbe dovuto seguire l'algoritmo. A seconda delle tipologie di approccio 
+\textbf{Task-Agnostic/Task-Aware} avremo delle differenze all'interno della \textit{Pipeline} che verranno analizzate successivamente.
+\newline
+Per descrivere al meglio il problema del \textit{Catastrophic Forgetting} è stato valutato di dividere il dataset in 5 \textit{tasks} ciascuno con i dati relativi  a due \textit{labels}, visto che \textit{CIFAR-10} ha 10 classi. Se fossero stati utilizzati solamente due \textit{tasks} si sarebbero potuti ottenere dei risultati poco significativi per il progetto.
+\newpage
+La \textbf{\textit{Pipeline}} del processo è la seguente:
+\begin{enumerate}
+    \item Creare \textbf{\textit{Rete Neurale Convoluzionale}}  che farà da \textit{Backbone};
+    \item Per ogni t in \textit{Tasks}:
+    \begin{enumerate}
+        \item Aggiungere un nuovo \textit{Classification Module} per il \textit{task} corrente;
+        \item \textit{SetTask} per selezionare l'\textit{output} corretto della rete a seconda di  \textit{Aware/Agnostic Training}; 
+        \item Fare il \textit{Training} per il \textit{Task} t;
+        \item \textit{SetTask} per selezionare l'\textit{output} corretto della rete a seconda di  \textit{Aware/Agnostic Testing};
+        \item Fare \textit{Test}  per il \textit{Task} t;
+     \end{enumerate}
+    \item Fare \textit{Test}  per ogni \textit{task} dopo l'ultimo \textit{Training}, selezionando \textit{output} giusto per la tipologia di \textit{testing}.
+\end{enumerate}
+2.b/2.d/3 sono le fasi che vengono influenzate dalla scelta della tipologia di \textit{Agnostic/Aware}. Ciò consiste nel fatto che l'\textbf{output} della rete verrà modificato seguendo il paradigma \textit{Task-Aware/Task-Agnostic}, diventando unico per più \textit{tasks} nel caso \textit{Agnostic} e singolo per il \textit{task} specifico per \textit{Aware}.\newline
+Inoltre, il processo della \textbf{\textit{pipeline}} sarà il medesimo sia al variare del numero di \textit{tasks} che della formazione di quest'ultimi(caso di \textit{labels randomiche}).\newline
+Avremo, quindi, 5 configurazioni diverse di Processi di cui 4 andranno a combinare \textit{Aware/Agnostic outputs} e una sarà relativa al \textit{Joint-Train}.\newline
+Verranno mostrati i risultati ottenuti nelle quattro configurazioni tenendo presente come \textbf{\textit{upperbound}} il valore della \textbf{\textit{accuracy}} ottenuta dal \textbf{\textit{Joint-Train}}.
+\newpage
+\section{Esperimenti}
+Quindi le configuazioni di nostro interesse saranno:
+\begin{enumerate}
+     \item \textbf{\textit{Joint-Training/Testing}}: Corrisponde sostanzialmente ad allenare e testare la rete su tutte le \textit{labels} contemporaneamente. Sarà equivalente ad un unico \textit{Task} con tutti gli \textit{examples} del dataset.
+    
+    \item \textbf{\textit{Task-Agnostic Training}/\textit{Task-Agnostic Testing}}: \textit{training} con \textit{output} per ogni \textit{task}, \textit{testing} con \textit{output} per ogni \textit{task}.  
+    
+    \item \textbf{ \textit{Task-Agnostic Training}/\textit{Task-Aware Testing}} : \textit{training} con \textit{output} per ogni \textit{task}, \textit{testing} con \textit{output} per \textit{task} specifico.
+    
+    \item \textbf{\textit{Task-Aware Training}/\textit{Task-Aware Testing}} : \textit{training} con \textit{output} per \textit{task} specifico, \textit{testing} con \textit{output} per \textit{task} specifico. 
+    
+    \item \textbf{\textit{Task-Aware Training}/\textit{Task-Agnostic Testing}}: \textit{training} con \textit{output} per \textit{task} specifico, \textit{testing} con \textit{output} per ogni \textit{task}  
+\end{enumerate}
+Per comprendere nel miglior modo i risultati saranno  rappresentate le \textit{accuracies} delle configurazioni in due grafici. Il primo sarà relativo al \textbf{\textit{Task-Agnostic Training}} riportando le \textit{accuracies} relative ai casi \textit{Aware/Agnostic} così da visualizzare le differenze, mentre il secondo avrà \textit{Task-Aware Training}. Entrambi i grafici saranno confrontati al valore \textit{Joint-Train} che rappresenterà l'\textit{upperbound} per qualsiasi configurazione. \newline
+Un altro valore importante da analizzare per comprendere al massimo il valore del \textit{Catastrophic Forgetting} è la differenza tra la media delle \textit{accuracies} dopo l'allenamento relativo a ciascun \textit{task} e quella dopo l'ultimo \textit{task}. Questo valore ci fornisce il \textbf{\textit{Catastrophic Forgetting}} a cui siamo andati incontro grazie al \textit{Continual Learning}.
+\newpage
+\subsection{Joint-Training}
+Prima di andare ad analizzare le varie configurazioni è necessario concentrarci sul \textbf{\textit{Joint-Training}}.
+Il \textbf{\textit{Joint-Training}} corrisponde al generico procedimento di \textit{Training/Testing} che viene eseguito nel \textit{Visual Recognition}. Ciò consiste in un addestramento e \textit{testing} fatto sulla totalità degli esempi appartenenti ai \textit{batches} che compongono il dataset senza considerare la divisione in \textit{Tasks} ignorando, quindi, il paradigma del \textit{Continual Learning}. Questa \textit{baseline} ci fornisce un \textit{upperBound} per le \textit{accuracies} rilevate.
+Il valore di \textit{accuracy} che abbiamo ottenuto dal nostro \textit{Joint-Training} è di \textit{\textbf{77.6}} e lo utilizzeremo come riferimento nei nostri grafici. 
+\subsection{Agnostic-Training}
+Qui di seguito  viene riportato il grafico con i risultati ottenuti sia per \textit{Agnostic} che \textit{Aware Testing}: 
+\begin{figure}[ht]
+\centering
+\caption{Agnostic Training}
+\includegraphics[width=\linewidth]{img/Agnostic_Agnostic-Aware.png}
+\label{figure : Angostic_training}
+\end{figure}
+\newpage
+Prima di analizzare il grafico  andiamo a considerare il paradigma l'\textit{Agnostic-Training} che consiste nel \textit{training}
+senza sapere di quale \textit{task} ci stiamo occupando.
+Ciò comporta che ad ogni \textit{task} l'\textit{output} della rete consisterà in tutti i moduli dei \textit{tasks} fino a quello corrente concatenati nel metodo \textit{Forward}, questo perchè non possiamo selezionare l'\textit{output} relativo al \textit{Task} in esecuzione.
+\newline
+Dal grafico ~\ref{figure : Angostic_training}, che si trova a pagina precendete, possiamo notare vari aspetti interessanti sui risultati ottenuti. Prima di tutto, notiamo che i valori delle \textit{accuarcies} sui vari \textit{tasks}, calcolate dopo i rispettivi \textit{Training}, ottengono valori molto elevati che superano persino il valore del \textit{Joint-Training}. Questo è dovuto al numero minore di dati utilizzati rispetto al dataset completo e dal fatto che il \textit{test} è effetuato subito  dopo il \textit{training} del relativo \textit{task}. Inoltre, da notare come i due approcci di \textit{testing} ottengano \textit{accuracies} quasi identiche: la rete viene \textit{testata} subito dopo il \textit{train} relativo di conseguenza i pesi associati alla clasificazione sono molto precisi per entrambe le configurazioni, ottenendo risultati per ciascun \textit{task} migliori anche del \textit{Joint-Training} .
+L'\textit{accuracy} calcolata sull'ultimo \textit{task}, naturalmente, avrà valore uguale per tutte e quattro le configurazioni, come si può notare nel grafico ~\ref{figure : Angostic_training} nel punto relativo a quest'ultimo.
+\newline
+Per quanto riguarda le \textit{accuracies} calcolate successivamente all'ultimo \textit{training}, vediamo che si ottiene un calo drastico di precisione su ciascun \textit{Task} escluso l'ultimo come abbiamo precedentemente affermato. Questo è il fenomeno del \textbf{Catastrophic Forgetting}, introdotto nel \autoref{ch:chapter1}, che porta il \textit{modello} a dimenticare tutti i \textit{weight} relativi ai \textit{tasks} precedenti.
+In particolare nella configurazione \textit{Aware} si ottengono dei valori migliori dati dall'output più preciso e specifico per il relativo \textit{task}, dati dalla selezione della \textit{Classification Head} relativa a quest'ultimo. Per quanto riguarda la configurazione di \textit{Agnostic Testing}, otteniamo un valore molto alto per l'ultimo \textit{Task} mentre per i 4 precedenti l'\textit{accuracy} cala a 0. Questo fenomeno prende il nome di 
+\textit{\textbf{Task Recency Bias}}. Si tratta di un fenomeno che consiste nel fatto che la \textit{rete} abbia la tendenza a ricordare e a prevedere meglio dati su cui è stato fatto per ultimo il \textit{training} portando a dimenticare totalmente i \textbf{parametri} appartenenti ai \textit{tasks} precedenti, come viene descritto in \cite{Task_Recency_Bias}. Questo risultato è ricondotto all'utilizzo di \textit{CrossEntropyLoss}  che aumenta il valore della probabilità relativa alla classe corretta e diminuisce quella relativa alla classe non corretta all'interno della distribuzione di probabilità, dato che grazie al \textit{SoftMax} la somma dei valori deve essere uguale a uno. Ad ogni esempio del \textit{batch} del \textit{task} corrente riduce la probabilità delle classi appartenenti a quelli precedenti, andando incontro al \textbf{Catastrophic Forgetting}.
+\newline
+Per questo motivo è interessante valutare le medie delle \textit{accuracies} per analizzare l'occorrere del \textbf{Catastrophic Forgetting} nelle varie configurazioni.
+Qui di seguito i valori delle \textit{accuracies} sono  riportate in due tabelle, una per tipologia di \textit{testing}.
+\begin{table}[!htb]
+\begin{minipage}{.5\linewidth}
+    \centering
+
+    \label{tab:Agnostic-Agnostic }
+
+    \medskip
+
+\begin{tabular}{l*{6}{c}r}
+Tasks   & First Train & Last Train\\
+\hline
+   Task 0      &     94.30      &      0.0\\
+   Task 1      &     83.45      &      0.0\\
+   Task 2      &     91.25      &      0.0\\
+   Task 3      &     94.65      &      0.0\\
+   Task 4      &     95.00      &      95.00\\
+\end{tabular}
+\caption{Agnostic-Agnostic}
+\label{tab:Agnostic-Agnostic}
+\end{minipage}\hfill
+\begin{minipage}{.5\linewidth}
+    \centering
+
+    \label{tab:Agnostic-Aware}
+
+    \medskip
+
+\begin{tabular}{l*{6}{c}r}
+Tasks   & First Train  & Last Train\\
+\hline
+   Task 0      &     93.10      &      75.70\\
+   Task 1      &     82.60      &      60.90\\
+   Task 2      &     85.95      &      56.95\\
+   Task 3      &     94.15      &      45.35\\
+   Task 4      &     95.75      &      95.75\\
+\end{tabular}
+\caption{Agnostic-Aware}
+\label{tab:Agnostic-Aware}
+\end{minipage}
+\end{table}
+\newline
+Nelle tabelle~\ref{tab:Agnostic-Agnostic} e~\ref{tab:Agnostic-Aware} notiamo, come avevamo già fatto nel grafico in figura ~\ref{figure : Angostic_training} a pagina ~\pageref{figure : Angostic_training}, che l'\textit{accuracy} della configurazione \textit{Agnostic-Agnostic} è peggiore rispetto a quella di \textit{Agnostic-Aware}, ma per valutare la differenza di valori, ma soprattutto il \textit{forgetting}, calcoliamo la media di quest'ultimi.
+\newline
+Facendo le medie otteniamo i seguenti valori:
+\begin{itemize}
+    \item Tabella~\ref{tab:Agnostic-Agnostic}: Abbiamo una \textit{accuracy} iniziale di 91.73\% e finale di 19.0\%, quindi otteniamo un decremento del 72.71\%.
+    \item Tabella~\ref{tab:Agnostic-Aware}: Abbiamo una \textit{accuracy} iniziale di 90.30\% e finale di 66.92\%, quindi otteniamo un decremento del 23.38\%.
+\end{itemize}
+Notiamo che la media dell'\textit{accuracies} del \textit{Task Agnostic} e \textit{Task Aware Testing} sono entrambe inferiori dell'\textit{upperbound} rappresentato dal \textit{Joint-Train}, confermando ciò che si poteva notare già a livello grafico nell'immagine~\ref{figure : Angostic_training}.
+Il decremento della \textit{accuracy} ci serve a valutare l'entità del \textit{Catastrophic Forgetting} a cui siamo andati incontro.
+\newline
+Questo valore inoltre ci conferma il \textit{forgetting} molto elevato che abbiamo ottenuto sui \textit{tasks} precedenti all'ultimo  utilizzando la configurazione \textit{Agnostic-Agnostic}. Vedremo successivamente una soluzione \textit{naïve} al problema del \textit{Task Recency Bias}, basato sull'approccio \textit{Replay Based Methods}.
+\newline
+In generale, il decremento di \textit{accuracy} per entrambe le configurazioni utilizzate in questo paragrafo è elevato, anche se con entità diverse. Inoltre la distanza di \textit{accuracy} in media dal valore ottenuto con il \textit{Joint-Train} assume un valore del 10,68\%, per la configurazione \textit{Agnostic-Aware}, 58,60\% per \textit{Agnostic-Agnostic}. Questo ci fa comprendere l'entità del \textit{drop} di \textit{accuracy} a cui si può andare incontro adottando una divisione in \textit{tasks} dovuto al \textit{Catastrophic Forgetting}.
+\subsection{Aware-Training}
+In questa sezione ci concentriamo su altre due configurazioni\textit{Task-Aware} per il \textit{training} introdotte già a \textit{pag.}14.
+A differenza della configurazione \textit{Task-Agnostic} possiamo selezionare la \textit{Classification-Head} relativa al \textit{Task} corrente: di conseguenza il \textit{Training} per ognuno di essi sarà eseguito con un \textit{output} di soli due valori modificando, quindi, l'aggiornamento dei parametri della \textit{Rete}.\newline
+Riportiamo qui di seguito il grafico che rappresenta le \textit{accuracies}:
+\begin{figure}[ht]
+\centering
+\caption{Agnostic Training}
+\includegraphics[width=\linewidth]{img/Aware_Agnostic-Aware.png}
+\label{figure : Aware_Training}
+\end{figure}
+\newline
+Dalla figura ~\ref{figure : Aware_Training} possiamo notare che l'andamento generale delle \textit{accuracies} segue, in linea generale, quello della figura ~\ref{figure : Angostic_training} a pagina 15.
+Di conseguenza rileviamo che l'\textit{accuracy} su un \textit{task} calcolata subito dopo il corrispondente addestramento ha un valore molto buono, che in media è addirittura superiore al \textit{Joint-Train}  per \textit{Aware-Test}. Per \textit{Agnostic-Test}, invece, tende a calare all'aumentare del \textit{task}. Inoltre abbiamo che l'\textit{accuracy} sull'ultimo \textit{task} ha lo stesso valore per tutti i casi riportati, tranne uno: \textit{Aware-Agnostic}. Si può notare che l'\textit{accuracy} calcolata sull'ultimo \textit{task} a seconda della tipologia assume dei valori diversi.
+In particolare per la configurazione \textit{Agnostic Test} notiamo che l'\textit{accuracy} subito dopo il \textit{Training} assume un valore sempre minore fino all'ultimo \textit{task} in cui è quasi nulla. Questo risultato è ottenuto perchè durante la fase \textit{train} utilizziamo la \textit{Classification-head} specifica del \textit{task} mentre nella fase di \textit{Testing} utilizziamo un \textit{output} unico per tutti \textit{tasks} fino a quello corrente.
+Adesso mostriamo di seguito le tabelle con le \textit{accuracies} ottenute per poter capire il \textit{forgetting} ottenuto e comparare i risultati con l' \textit{Agnostic-Train}:
+\begin{table}[!htb]
+\begin{minipage}{.5\linewidth}
+    \centering
+
+    \label{tab:Aware-Agnostic }
+
+    \medskip
+
+\begin{tabular}{l*{6}{c}r}
+Tasks   & First Train & Last Train\\
+\hline
+   Task 0      &     94.15      &       2.50\\
+   Task 1      &     82.90      &       2.65\\
+   Task 2      &     81.55      &      49.25\\
+   Task 3      &     35.70      &      21.85\\
+   Task 4      &      1.05      &       1.05\\
+\end{tabular}
+\caption{Aware-Agnostic}
+\label{tab:Aware-Agnostic}
+\end{minipage}\hfill
+\begin{minipage}{.5\linewidth}
+    \centering
+
+    \label{tab:Aware-Aware}
+
+    \medskip
+
+\begin{tabular}{l*{6}{c}r}
+Tasks   & First Train  & Last Train\\
+\hline
+   Task 0      &     93.30      &      75.60\\
+   Task 1      &     84.25      &      60.20\\
+   Task 2      &     92.10      &      54.75\\
+   Task 3      &     96.55      &      71.50\\
+   Task 4      &     96.45      &      96.45\\
+\end{tabular}
+\caption{Aware-Aware}
+\label{tab:Aware-Aware}
+\end{minipage}
+\end{table}
+\newline
+Nelle tabelle ~\ref{tab:Aware-Agnostic} e ~\ref{tab:Aware-Aware} notiamo subito che la \textit{accuracy} rilevata nel caso di \textit{Aware-Testing} è migliore, ma consideriamo adesso le medie delle \textit{accuracies} e il \textit{forgetting} ottenuto.
+\begin{itemize}
+    \item Tabella~\ref{tab:Aware-Agnostic}: Abbiamo una \textit{accuracy} iniziale di 59.07\% e finale di 15.45\%, quindi otteniamo un decremento del 43.61\%.
+    \item Tabella~\ref{tab:Aware-Aware}: Abbiamo una \textit{accuracy} iniziale di 92.53\% e finale di 71.7\%, quindi otteniamo un decremento del 20.83\%.
+\end{itemize}
+La prima cosa che rileviamo è che l'\textit{accuracy} iniziale della configurazione \textit{Agnostic-Agnostic} ha ottenuto un valore in media molto minore rispetto alle altre, dovuto all'\textit{Agnostic-Testing}.
+L'\textit{accuracy} ottenuta nel caso \textit{Aware-Aware} è il miglior risultato e si avvicina a quella del \textit{Joint-Train} con uno scarto del 5,9\%. Mentre nel caso della Tabella ~\ref{tab:Aware-Agnostic} l'\textit{Accuracy} ottenuta rappresenta il "\textit{Lower-Bound}" dei risultati con uno scarto dal \textit{Joint-Train} del 62,15\%. 
+\section{Soluzione Naïve}
+In questa sezione andiamo ad proporre una soluzione con un \textit{naïve} al problema del \textit{Catastrophic Forgetting}. Esistono tre famiglie di soluzioni al problema del \textit{Continual Learning}, che vengono descritte in \cite{Continual_Learning}:
+\begin{itemize}
+    \item \textit{Replay-based methods}
+    \item \textit{Regularization-based methods}
+    \item\textit{Parameter isolation methods}
+\end{itemize}
+In questa sezione ci soffermeremo su una soluzione \textit{Naïve} della famiglia dei \textit{\textbf{replay-based methods}}. Questo approccio consiste nel memorizzare i campioni o generare \textit{pseudo-campioni}, con un modello generativo, appartenenti ai \textit{tasks} precedenti. Questi esempi  vengono riutilizzati durante l'apprendimento di un nuovo \textit{task} per alleviare il \textit{forgetting}.\newline
+Il problema principale dei \textit{replay-based methods} risiede nella memoria: salvando esempi dai \textit{tasks} precedenti la memoria necessaria a ciascuna fase di \textit{training} sarà sempre maggiore. Ciò può esser ovviato utilizzando un limite di esempi possibili dai precedenti \textit{tasks}, ottenendo però una perdita di generalizzazione del rispettivo \textit{task}.
+In particolare questi due metodi utilizzano una specifica tecnica di scelta degli esempi da ciascun insieme di esempi appartenenti ai \textit{tasks} precedenti.\newline
+In questo elaborato, però, adotteremo una soluzione \textit{naïve} e semplificata, scegliendo gli esempi in modo \textit{randomico} senza basarci su nessuna metrica o \textit{bias}.
+In particolare ci soffermeremo sul caso \textit{Agnostic-Training/Agnostic-Test} in modo tale da poter apprezzare l'aumento di \textit{accuracies} media e confrontarlo con il \textit{Joint-Train} (essendo stanzialmente della stessa tipologia di configurazione). Mostriamo, infatti, come cambia il valore delle \textit{accuracies} al variare del numero di esempi utilizzati appartenenti ai \textit{tasks} precedenti per ogni processo di \textit{training}. Partiamo dall'utilizzo dello 0.1\% degli esempi precedenti, fino ad arrivare all'1\%, andando a confrontare con il valore dei \textit{Joint-Train} che rappresenta l'\textit{UpperBound}.
+Come in precedenza, andiamo a riportare di seguito il grafico:
+\begin{figure}[ht]
+\centering
+\caption{Agnostic Replay Training}
+\includegraphics[width=\linewidth]{img/Agnostic_Replay.png}
+\label{figure : Angostic_replay}
+\end{figure}
+\newline
+Come si può notare dal grafico \ref{figure : Angostic_replay} all'aumentare della percentuale del numero di esempi di \textit{replay} migliora l'\textit{accuracy} in media, diminuendo il \textit{forgetting}. Tutto ciò è stato ottenuto senza l'utilizzo di nessuna strategia specifica per selezionare gli esempi ad ogni iterazione del \textit{training}. Avremmo potuto, quindi, ottenere risultati ancora migliori rispetto a quelli presentati in \ref{figure : Angostic_replay}. \newline
+Inoltre aumentando il numero degli esempi utilizzati nel \textit{replay-training} dei \textit{tasks} precedenti  sarebbero stati ottenuti risultati migliori.
+\newline
+La scelta di questa percentuale è, però, in parte vincolata. Sarebbe stato poco rappresentativo utilizzare un numero elevato e poco intelligente da un punto di vista delle risorse di memorizzazione. Nel caso di \textit{CIFAR-10} il problema della memoria utilizzata non sussiste, ma se avessimo utilizzato un dataset dal numero di esempi  maggiore lo spazio di archiviazione assegnato agli esempi dei \textit{tasks} precedenti sarebbe stato un punto focale, essendo un punto debole dei \textit{replay-based methods}.
+Ciò che si nota dal grafico \ref{figure : Angostic_replay} è che l'\textit{accuracy} ottenuta dal valore 50 dell' ascisse in poi tende a salire, mentre il valore rimane stabile intorno al 20\% nei valori delle ascisse precedenti. Possiamo, quindi,
+affermare che utilizzando un numero superiore a 50 esempi per applicare il \textit{Replay Training} otterremo un miglioramento di prestazioni crescente all'aumentare di tale valore.
+\newline
+ La crescita comunque non è elevata e rimane  un grosso divario tra i risultati ottenuti e il valore del \textit{Joint-Train}, rimarcando nuovamente il problema del \textbf{\textit{Catastrophic Forgetting}} che affligge le rappresentazioni pratiche del \textit{Continual Learning}.
+
